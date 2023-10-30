@@ -1,7 +1,15 @@
 package org.apache.maven;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.time.Duration;
+import java.util.List;
+
 
 public class ClientAPI {
 
@@ -18,8 +26,7 @@ public class ClientAPI {
     private static final int INIT_REQUEST_COUNT_PER_THREAD_GROUP = 100;
     private static final int REQUEST_COUNT_PER_THREAD = 1000;
 
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length != 4) {
             System.out.println("Usage: java Main <threadGroupSize> <numThreadGroups> <delay> <IPAddr>");
             System.exit(1);
@@ -48,7 +55,6 @@ public class ClientAPI {
         }
 
         long endTime = System.currentTimeMillis();
-
         // Calculate metrics
         double wallTime = (endTime - startTime) / 1000.0;
         double throughput = (numThreadGroups * threadGroupSize * 2000) / wallTime;
@@ -64,7 +70,7 @@ public class ClientAPI {
         System.out.println("Throughput: " + throughput + " requests per second");
     }
 
-    private static void runThreads(int numThreads, String url, int numRequests) {
+    private static void runThreads(int numThreads, String url, int numRequests) throws IOException {
         Thread[] threads = new Thread[numThreads];
         String port = url.substring(url.length() - 4);
         String postUrl;
@@ -76,25 +82,25 @@ public class ClientAPI {
             postUrl = url + postAlbumEndpoint_Java;
             getUrl = url + getAlbumsEndpoint_Java;
         }
+
+        String imagePath = "/Users/wanyuewang/Desktop/6650/nmtb.png";
+        File imageFile = new File(imagePath);
+        byte[] imageData = Files.readAllBytes(imageFile.toPath());
+
+        HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+
         for (int i = 0; i < numThreads; i++) {
             threads[i] = new Thread(() -> {
-                HttpURLConnection postConnection = null;
-                HttpURLConnection getConnection = null;
                 try{
-                    postConnection = createConnection(postUrl, "POST");
-                    getConnection = createConnection(getUrl, "GET");
                     for (int j = 0; j <numRequests; j++) {
-                            sendPostRequest(postUrl, postConnection);
-                            sendGetRequest(getUrl, getConnection);
+                        sendPostRequest(postUrl, httpClient, imageData);
+                        sendGetRequest(getUrl, httpClient);
                     }
                 }catch (IOException e) {
                     e.printStackTrace();
-                }
-                if(getConnection != null) {
-                    getConnection.disconnect();
-                }
-                if(postConnection != null) {
-                    postConnection.disconnect();
                 }
             });
             threads[i].start();
@@ -110,15 +116,22 @@ public class ClientAPI {
         }
     }
 
-    private static void sendPostRequest(String url, HttpURLConnection postConnection) throws IOException {
+    private static void sendPostRequest(String url, HttpClient httpClient, byte[] imageData) throws IOException {
         int attempts = 0;
         int maxAttempts = MAX_RETRY_ATTEMPTS;
+
         while(attempts < maxAttempts) {
             try {
-//                HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-//                connection.setRequestMethod("POST");
-//                HttpURLConnection connection = createConnection(url, "POST");
-                int responseCode = postConnection.getResponseCode();
+                // Create a POST request with multipart content
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("Content-Type", "multipart/form-data")
+                        .POST(buildMultipartBody(imageData))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                int responseCode = response.statusCode();
+                System.out.println("the code" + responseCode);
                 if (responseCode >= 200 && responseCode < 300) {
                     // Success, break the loop
                     break;
@@ -133,22 +146,28 @@ public class ClientAPI {
                 System.out.println("Retrying POST request (Attempt " + attempts + ")");
             }catch (Exception e) {
                 // Handle exceptions related to network issues or connection problems
+                e.printStackTrace();
                 attempts++;
                 System.out.println("Exception during POST request." + e.getMessage());
             }
         }
     }
 
-    private static void sendGetRequest(String url, HttpURLConnection getConnection) throws IOException {
+    private static void sendGetRequest(String url, HttpClient httpClient) throws IOException {
         int attempts = 0;
         int maxAttempts = MAX_RETRY_ATTEMPTS;
 
         while(attempts < maxAttempts) {
             try {
-//                HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-//                connection.setRequestMethod("GET");
-//                HttpURLConnection connection = createConnection(url, "GET");
-                int responseCode = getConnection.getResponseCode();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .GET()
+                        .uri(URI.create(url))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                int responseCode = response.statusCode();
+                System.out.println("the code" + responseCode);
                 if (responseCode >= 200 && responseCode < 300) {
                     // Success, break the loop
                     break;
@@ -168,10 +187,8 @@ public class ClientAPI {
         }
     }
 
-    private static HttpURLConnection createConnection(String url, String method) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod(method);
-        return connection;
+    private static HttpRequest.BodyPublisher buildMultipartBody(byte[] imageData) throws Exception {
+        return HttpRequest.BodyPublishers.ofByteArrays(List.of(imageData));
     }
-
 }
+

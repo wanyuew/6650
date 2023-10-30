@@ -1,17 +1,16 @@
 package main.java;
 
-import com.google.gson.Gson;
+        import com.google.gson.Gson;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.MultipartConfig;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
+        import javax.servlet.ServletException;
+        import javax.servlet.annotation.MultipartConfig;
+        import javax.servlet.annotation.WebServlet;
+        import javax.servlet.http.HttpServlet;
+        import javax.servlet.http.HttpServletRequest;
+        import javax.servlet.http.HttpServletResponse;
+        import javax.servlet.http.Part;
+        import java.io.IOException;
+        import java.io.InputStream;
 
 @MultipartConfig
 @WebServlet(name="JavaServlet", value = "/albums/*")
@@ -70,14 +69,12 @@ public class AlbumServlet extends HttpServlet {
 
         try {
             //extract image info from input
-            String size;
+            String size = "0";
             Part filePart = request.getPart("image");
             if (filePart != null) {
                 InputStream fileContent = filePart.getInputStream();
                 long fileSize = filePart.getSize();
                 size = String.valueOf(fileSize);
-            } else {
-                size = "0";
             }
 
             //create image
@@ -99,7 +96,7 @@ public class AlbumServlet extends HttpServlet {
             response.getOutputStream().print(gson.toJson(errorMsg));
             response.getOutputStream().flush();
         }
-   }
+    }
 
     private Boolean isValidUrl(String[] urlPath) {
         // TODO: validate the request url path according to the API spec
