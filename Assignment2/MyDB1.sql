@@ -1,0 +1,17 @@
+CREATE SCHEMA IF NOT EXISTS MyDB1;
+USE MyDB1;
+
+DROP TABLE IF EXISTS AblumImg;
+DROP TABLE IF EXISTS Albums;
+
+CREATE TABLE Albums 
+(
+	AlbumId INT AUTO_INCREMENT NOT NULL,
+    Artist VARCHAR(255),
+    AlbumYear VARCHAR(255),
+	Title VARCHAR(255),
+    ImgData BLOB,
+    ImageSize VARCHAR(255),
+    CONSTRAINT pk_Albums_AlbumId PRIMARY KEY (AlbumId)
+);
+
