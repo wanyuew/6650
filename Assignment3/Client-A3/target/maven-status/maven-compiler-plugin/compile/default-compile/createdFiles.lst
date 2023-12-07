@@ -1,0 +1,5 @@
+org/apache/maven/RecordToCSV.class
+org/apache/maven/ClientAPITest.class
+org/apache/maven/ResponseTimeData.class
+org/apache/maven/StatsCalculation.class
+org/apache/maven/ThroughputData.class
